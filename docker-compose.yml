@@ -1,0 +1,116 @@
+name: runeterra-rag
+
+services:
+  neo4j:
+    # Jika tag 5.26-community tidak tersedia di mesinmu, ganti ke neo4j:5-community
+    image: neo4j:5.26-community
+    container_name: runeterra-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"   # Neo4j Browser
+      - "7687:7687"   # Bolt
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-runeterra123}
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-runeterra123}
+      NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL:-512m}
+      NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_MAX:-1G}
+      NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-512m}
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "cypher-shell -u \"$${NEO4J_USER}\" -p \"$${NEO4J_PASSWORD}\" 'RETURN 1' >/dev/null 2>&1 || exit 1"
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  qdrant:
+    # Vector DB untuk bagian Yuda
+    image: qdrant/qdrant:latest
+    container_name: runeterra-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"   # REST
+      - "6334:6334"   # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  graph-ingest:
+    # Bagian Lolo: ekstraksi dataset latest -> Neo4j
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: runeterra-graph-ingest
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-runeterra123}
+      NEO4J_DATABASE: ${NEO4J_DATABASE:-neo4j}
+      DATA_DIR: /app/data
+      PROCESSED_DIR: /app/processed
+      BATCH_SIZE: ${BATCH_SIZE:-500}
+    volumes:
+      # latest-only: versioned sengaja TIDAK di-mount.
+      - ./data/latest:/app/data/latest:ro
+      - ./data/globals-en_us.json:/app/data/globals-en_us.json:ro
+      - ./data/processed:/app/processed
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    profiles: ["ingest"]
+
+  vector-ingest:
+    # Bagian Yuda: embedding -> Qdrant (stub, implementasi menyusul)
+    build:
+      context: .
+      dockerfile: Dockerfile.vector
+    container_name: runeterra-vector-ingest
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-cards}
+      DATA_DIR: /app/data
+      PROCESSED_DIR: /app/processed
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-intfloat/multilingual-e5-large}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
+    volumes:
+      # latest-only: versioned sengaja TIDAK di-mount.
+      - ./data/latest:/app/data/latest:ro
+      - ./data/globals-en_us.json:/app/data/globals-en_us.json:ro
+      - ./data/processed:/app/processed
+    depends_on:
+      - qdrant
+    profiles: ["ingest"]
+
+  api:
+    # Bagian Kesan: integrasi graph + vector + LLM
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: runeterra-api
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-runeterra123}
+      NEO4J_DATABASE: ${NEO4J_DATABASE:-neo4j}
+      QDRANT_URL: http://qdrant:6333
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-cards}
+      PROCESSED_DIR: /app/processed
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/processed:/app/processed:ro
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  qdrant_data:

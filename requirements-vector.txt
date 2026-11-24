@@ -1,0 +1,6 @@
+# Dependencies untuk bagian Vector Ingestion (Yuda).
+# Berat karena model embedding; build image vector bisa memakan waktu.
+qdrant-client>=1.12
+sentence-transformers>=3.3
+# torch akan terpasang sebagai dependency sentence-transformers.
+# Jika butuh versi CPU saja, tambahkan index-url CPU yang sesuai.
