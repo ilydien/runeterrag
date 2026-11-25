@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 .RECIPEPREFIX = >
 
-.PHONY: help up down logs ps extract load-graph load-vector verify reset-graph test shell
+.PHONY: help up down logs ps extract load-graph load-vector load-vector-recreate vector-verify snapshot-vector restore-vector verify reset-graph test shell
 
 help:
 > @echo "RuneTerraRAG - perintah utama"
@@ -9,6 +9,10 @@ help:
 > @echo "  make extract      # ekstrak dataset latest -> data/processed"
 > @echo "  make load-graph   # ekstrak (jika perlu) + load graph ke Neo4j"
 > @echo "  make load-vector  # load vektor ke Qdrant (tugas Yuda)"
+> @echo "  make load-vector-recreate # rebuild collection Qdrant"
+> @echo "  make vector-verify # validasi collection Qdrant"
+> @echo "  make snapshot-vector # buat snapshot Qdrant untuk handoff"
+> @echo "  make restore-vector SNAPSHOT=... # restore snapshot Qdrant"
 > @echo "  make verify       # validasi isi graph"
 > @echo "  make reset-graph  # hapus semua node/edge"
 > @echo "  make down         # hentikan semua service"
@@ -34,6 +38,18 @@ load-graph:
 
 load-vector:
 > docker compose --profile ingest run --rm vector-ingest
+
+load-vector-recreate:
+> docker compose --profile ingest run --rm vector-ingest python -m src.vector.load --recreate
+
+vector-verify:
+> docker compose --profile ingest run --rm vector-ingest python -m src.vector.validate
+
+snapshot-vector:
+> ./scripts/create_qdrant_snapshot.sh
+
+restore-vector:
+> ./scripts/restore_qdrant_snapshot.sh $(SNAPSHOT)
 
 verify:
 > docker compose --profile ingest run --rm graph-ingest python -m src.graph.validate

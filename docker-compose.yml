@@ -32,7 +32,7 @@ services:
 
   qdrant:
     # Vector DB untuk bagian Yuda
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.20.2
     container_name: runeterra-qdrant
     restart: unless-stopped
     ports:
@@ -66,7 +66,7 @@ services:
     profiles: ["ingest"]
 
   vector-ingest:
-    # Bagian Yuda: embedding -> Qdrant (stub, implementasi menyusul)
+    # Bagian Yuda: embedding -> Qdrant
     build:
       context: .
       dockerfile: Dockerfile.vector
@@ -78,11 +78,13 @@ services:
       PROCESSED_DIR: /app/processed
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-intfloat/multilingual-e5-large}
       EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
+      HF_HOME: /app/.cache/huggingface
     volumes:
       # latest-only: versioned sengaja TIDAK di-mount.
       - ./data/latest:/app/data/latest:ro
       - ./data/globals-en_us.json:/app/data/globals-en_us.json:ro
       - ./data/processed:/app/processed
+      - hf_cache:/app/.cache/huggingface
     depends_on:
       - qdrant
     profiles: ["ingest"]
@@ -116,3 +118,4 @@ volumes:
   neo4j_data:
   neo4j_logs:
   qdrant_data:
+  hf_cache:
