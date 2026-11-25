@@ -11,8 +11,10 @@ services:
       - "7687:7687"   # Bolt
     environment:
       NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-runeterra123}
-      NEO4J_USER: ${NEO4J_USER:-neo4j}
-      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-runeterra123}
+      # Jangan pakai nama NEO4J_USER/NEO4J_PASSWORD di service ini:
+      # image Neo4j 5 menganggap semua env NEO4J_* sebagai config setting.
+      AUTH_USER: ${NEO4J_USER:-neo4j}
+      AUTH_PASSWORD: ${NEO4J_PASSWORD:-runeterra123}
       NEO4J_server_memory_heap_initial__size: ${NEO4J_HEAP_INITIAL:-512m}
       NEO4J_server_memory_heap_max__size: ${NEO4J_HEAP_MAX:-1G}
       NEO4J_server_memory_pagecache_size: ${NEO4J_PAGECACHE:-512m}
@@ -22,7 +24,7 @@ services:
     healthcheck:
       test:
         - CMD-SHELL
-        - "cypher-shell -u \"$${NEO4J_USER}\" -p \"$${NEO4J_PASSWORD}\" 'RETURN 1' >/dev/null 2>&1 || exit 1"
+        - "cypher-shell -u \"$${AUTH_USER}\" -p \"$${AUTH_PASSWORD}\" 'RETURN 1' >/dev/null 2>&1 || exit 1"
       interval: 10s
       timeout: 10s
       retries: 15
@@ -101,7 +103,7 @@ services:
       QDRANT_COLLECTION: ${QDRANT_COLLECTION:-cards}
       PROCESSED_DIR: /app/processed
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     volumes:
       - ./data/processed:/app/processed:ro
     depends_on:
