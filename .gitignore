@@ -10,5 +10,8 @@ data/processed/*
 !data/processed/.gitkeep
 neo4j/
 qdrant/
+qdrant-snapshots/
+*.snapshot
+*.snapshot.sha256
 *.log
 .DS_Store

@@ -39,3 +39,7 @@ DEFAULT_PATCH = os.getenv("DATA_PATCH", "7_11_0")
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 QDRANT_COLLECTION = os.getenv("QDRANT_COLLECTION", "cards")
+EMBEDDING_MODEL = os.getenv(
+    "EMBEDDING_MODEL", "intfloat/multilingual-e5-large"
+)
+EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1024"))

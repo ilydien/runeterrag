@@ -107,39 +107,103 @@ Semua hasil **wajib** mengandung `cardCode` (atau `card_code` setelah dinormalis
 
 ### Vector (Yuda)
 
-Qdrant collection: `cards`
+Qdrant collection: `cards`, 1024 dimensi, cosine.
 
-Payload minimal:
+Model: `intfloat/multilingual-e5-large`.
+
+Prefix wajib:
+
+```text
+passage: <teks kartu>   # indexing
+query: <pertanyaan>     # search
+```
+
+Teks embedding berlabel:
+
+```text
+Card: Yasuo
+Type: Unit
+Supertype: Champion
+Region: Ionia
+Keywords: Quick Attack
+Cost: 4
+Stats: 5 Attack, 4 Health
+Description: ...
+Level-up Condition: ...
+```
+
+Aturan teks:
+
+- `set`, `rarity`, dan `flavorText` tidak di-embed pada v1. Flavor text tetap di graph.
+- Spell/ability tidak menulis `0 Attack, 0 Health`.
+- Equipment memakai `Bonus Stats: +X/+Y`.
+- Kartu tanpa teks memakai `Card Description: No native card description available.`
+- `Missing Translation` dibuang dari `keywords` dan `keywordRefs` untuk vector.
+- `Keywords: None` hanya jika setelah cleaning memang tidak ada keyword.
+
+Payload:
 
 ```json
 {
   "card_code": "01IO015",
   "name": "Yasuo",
   "type": "Unit",
+  "supertype": "Champion",
   "regions": ["Ionia"],
+  "keywords": ["Quick Attack"],
+  "keyword_refs": ["Quick Attack"],
+  "subtypes": [],
+  "formats": ["Standard", "Eternal"],
   "cost": 4,
+  "attack": 5,
+  "health": 4,
+  "set": "Set1",
+  "set_display_name": "Foundations",
+  "rarity": "Champion",
   "collectible": true,
   "has_native_text": true,
-  "text_status": "native"
+  "has_embedding_text": true,
+  "text_status": "native",
+  "patch": "7_11_0",
+  "embedding_model": "intfloat/multilingual-e5-large",
+  "embedding_template_version": "v1",
+  "text_hash": "..."
 }
 ```
 
-Spesifikasi teks embedding:
+Point ID: UUID5 deterministik dari `cardCode`.
 
-```
-name | descriptionRaw | levelupDescriptionRaw | flavorText | keywords | regions
+Filter MVP mengikuti graph:
+
+```text
+type, region, keyword, subtype, format, set, rarity, text_status,
+min_cost, max_cost, min_attack, max_attack, min_health, max_health,
+collectible, has_text
 ```
 
-Untuk 183 kartu tanpa teks native, teks atribut tetap dibuat agar semua kartu punya vektor.
+`has_text` dipetakan ke `has_native_text`. `has_embedding_text` terpisah.
+
+Manifest ingestion: `data/processed/vector_manifest.json`.
+
+```python
+vector_search(
+    query: str,
+    filters: dict | None = None,
+    top_k: int = 10,
+) -> list[dict]
+```
+
+Hasil sudah diurutkan berdasarkan cosine dan dideduplikasi. Setiap item wajib
+punya `card_code`; `score` adalah cosine asli, bukan skor RRF.
 
 ### Hybrid (Kesan)
 
 ```python
-vector_search(query: str, filters: dict, top_k: int) -> list[dict]
 hybrid_search(query: str, top_k: int = 10) -> list[dict]
 ```
 
 Merge memakai **Reciprocal Rank Fusion** (`src/retrieval/hybrid.py`), dedupe by `card_code`.
+Graph harus menyediakan ranked candidate list, bukan sekadar `ORDER BY cost, name`.
 
 ## 5. Endpoint API awal
 
@@ -167,5 +231,8 @@ Merge memakai **Reciprocal Rank Fusion** (`src/retrieval/hybrid.py`), dedupe by 
 - [ ] `data/processed/cards.jsonl` tersedia untuk Yuda.
 - [ ] `data/processed/aliases.json` tersedia untuk entity linking.
 - [ ] `make verify` lolos.
+- [x] `python -m src.vector.load --recreate` selesai untuk 2.512 kartu.
+- [x] `python -m src.vector.validate` lolos.
+- [ ] Baseline Recall@10 vector-only tercatat.
 - [ ] `docs/kontrak-integrasi.md` dibagikan ke Yuda & Kesan.
 - [ ] Endpoint `/cards/{code}` bisa diakses Kesan.
