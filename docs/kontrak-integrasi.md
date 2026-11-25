@@ -73,7 +73,7 @@ Dihasilkan oleh `python -m src.graph.extract`:
 | Edge | Jumlah | Keterangan |
 |---|---:|---|
 | `IN_REGION` | 2.602 | 90 kartu multi-region |
-| `HAS_KEYWORD` | 2.344 | dari `keywords[]` |
+| `HAS_KEYWORD` | 2.343 | dari `keywords[]` (duplikat `Spirit` pada `09DE033` sudah di-dedupe) |
 | `HAS_SUBTYPE` | 675 | |
 | `IN_SET` | 2.512 | |
 | `HAS_RARITY` | 2.512 | |

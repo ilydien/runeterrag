@@ -176,7 +176,7 @@ def run_validation(driver) -> dict[str, Any]:
     # Benchmark inti yang sudah diverifikasi dari dataset.
     benchmarks = {
         "IN_REGION": 2602,
-        "HAS_KEYWORD": 2344,
+        "HAS_KEYWORD": 2343,
         "HAS_SUBTYPE": 675,
         "IN_SET": 2512,
         "HAS_RARITY": 2512,

@@ -29,7 +29,7 @@ def test_dimension_counts(result):
 
 def test_core_edge_counts(result):
     assert result.edge_count("IN_REGION") == 2602
-    assert result.edge_count("HAS_KEYWORD") == 2344
+    assert result.edge_count("HAS_KEYWORD") == 2343
     assert result.edge_count("HAS_SUBTYPE") == 675
     assert result.edge_count("IN_SET") == 2512
     assert result.edge_count("HAS_RARITY") == 2512
@@ -42,6 +42,15 @@ def test_mention_counts(result):
     assert result.mention_count("REFERENCES") >= 800
     assert result.mention_count("MENTIONS_KEYWORD") >= 1100
     assert result.mention_count("MENTIONS_TERM") >= 1100
+
+
+def test_keyword_edges_are_unique(result):
+    pairs = [
+        (edge.srcKey, edge.dstKey)
+        for edge in result.edges
+        if edge.rel == "HAS_KEYWORD"
+    ]
+    assert len(pairs) == len(set(pairs))
 
 
 def test_no_dangling_card_edges(result):

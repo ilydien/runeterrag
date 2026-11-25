@@ -147,6 +147,11 @@ def _lookup_keys(value: str | None) -> set[str]:
     return {normalized, normalized.replace(" ", "")}
 
 
+def _unique(values: list[str]) -> list[str]:
+    """Dedupe sambil mempertahankan urutan (mis. Spirit x2 di 09DE033)."""
+    return list(dict.fromkeys(values))
+
+
 def build_keyword_lookup(globals_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     lookup: dict[str, dict[str, Any]] = {}
     for entry in globals_data.get("keywords", []):
@@ -369,8 +374,8 @@ def build_card_records(
                 collectible=bool(card.get("collectible", False)),
                 regions=list(card.get("regions", []) or []),
                 regionRefs=list(card.get("regionRefs", []) or []),
-                keywords=list(card.get("keywords", []) or []),
-                keywordRefs=list(card.get("keywordRefs", []) or []),
+                keywords=_unique(list(card.get("keywords", []) or [])),
+                keywordRefs=_unique(list(card.get("keywordRefs", []) or [])),
                 subtypes=list(card.get("subtypes", []) or []),
                 spellSpeed=card.get("spellSpeed", "") or "",
                 spellSpeedRef=card.get("spellSpeedRef", "") or "",
@@ -558,7 +563,7 @@ def build_edges(
         code = card["cardCode"]
         for region in card.get("regions", []):
             edges.append(EdgeRecord("Card", code, "IN_REGION", "Region", region))
-        for keyword in card.get("keywords", []):
+        for keyword in _unique(list(card.get("keywords", []) or [])):
             edges.append(
                 EdgeRecord("Card", code, "HAS_KEYWORD", "Keyword", keyword)
             )
